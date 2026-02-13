@@ -168,9 +168,17 @@ class CommitService:
 
         commits = []
         for row in result:
+            # row elements may already be UUID objects (depending on DB driver),
+            # or strings. Normalize safely.
+            raw_id = row[0]
+            raw_task_id = row[1]
+
+            commit_id = raw_id if isinstance(raw_id, UUID) else UUID(str(raw_id))
+            task_uuid = raw_task_id if isinstance(raw_task_id, UUID) else UUID(str(raw_task_id))
+
             commit = ContextCommit(
-                id=UUID(row[0]),
-                task_id=UUID(row[1]),
+                id=commit_id,
+                task_id=task_uuid,
                 message=row[2],
                 full_context=row[3],
                 author=row[4],
