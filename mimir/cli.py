@@ -405,7 +405,7 @@ def status() -> None:
 
 @app.command()
 def context(
-    task: str = typer.Option(..., "--task", help="Task name (required)"),
+    task: Optional[str] = typer.Option(None, "--task", help="Task name (defaults to current task)"),
     branch: Optional[str] = typer.Option(None, "--branch", help="If provided, limit to this branch"),
     reverse: bool = typer.Option(False, "--reverse", help="Show newest first"),
 ) -> None:
@@ -416,9 +416,15 @@ def context(
     try:
         services = get_services()
 
-        task_obj = services["task_service"].get_task_by_name(task)
+        # Resolve task: use provided --task or fall back to current state
+        task_name = task or StateManager.get_current_task()
+        if not task_name:
+            console.print("[bold red]✗ Error: Task not specified and no current task set[/bold red]")
+            raise typer.Exit(1)
+
+        task_obj = services["task_service"].get_task_by_name(task_name)
         if not task_obj:
-            console.print(f"[bold red]✗ Error: Task '{task}' not found[/bold red]")
+            console.print(f"[bold red]✗ Error: Task '{task_name}' not found[/bold red]")
             raise typer.Exit(1)
 
         commits: list[ContextCommit]
@@ -430,7 +436,7 @@ def context(
         services["session"].close()
 
         if not commits:
-            console.print(f"[dim]No commits found for task {task}[/dim]")
+            console.print(f"[dim]No commits found for task {task_name}[/dim]")
             raise typer.Exit()
 
         if reverse:
