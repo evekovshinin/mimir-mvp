@@ -191,6 +191,16 @@ class CommitService:
         logger.info(f"Retrieved {len(commits)} commits from history")
         return commits
 
+    def get_commits_for_task(self, task_id: UUID) -> list[ContextCommit]:
+        """Return all commits for a task ordered by creation time."""
+        rows = (
+            self.session.query(ContextCommit)
+            .filter(ContextCommit.task_id == task_id)
+            .order_by(ContextCommit.created_at.asc())
+            .all()
+        )
+        return rows
+
     def merge_commit(
         self,
         task_id: UUID,

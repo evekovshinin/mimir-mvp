@@ -403,6 +403,57 @@ def status() -> None:
         raise typer.Exit(1)
 
 
+@app.command()
+def context(
+    task: str = typer.Option(..., "--task", help="Task name (required)"),
+    branch: Optional[str] = typer.Option(None, "--branch", help="If provided, limit to this branch"),
+    reverse: bool = typer.Option(False, "--reverse", help="Show newest first"),
+) -> None:
+    """Show full context for a task (concatenate commit contexts).
+
+    If `--branch` is provided, shows contexts only from that branch's history.
+    """
+    try:
+        services = get_services()
+
+        task_obj = services["task_service"].get_task_by_name(task)
+        if not task_obj:
+            console.print(f"[bold red]✗ Error: Task '{task}' not found[/bold red]")
+            raise typer.Exit(1)
+
+        commits: list[ContextCommit]
+        if branch:
+            commits = services["commit_service"].get_history(task_obj.id, branch, limit=1000)
+        else:
+            commits = services["commit_service"].get_commits_for_task(task_obj.id)
+
+        services["session"].close()
+
+        if not commits:
+            console.print(f"[dim]No commits found for task {task}[/dim]")
+            raise typer.Exit()
+
+        if reverse:
+            commits = list(reversed(commits))
+
+        # Print concatenated contexts with headers per commit
+        for c in commits:
+            console.rule(f"Commit {str(c.id)[:8]} — {c.message}")
+            console.print(f"Author: {c.author}  Created: {c.created_at.isoformat()}")
+            if c.cognitive_load is not None or c.uncertainty is not None:
+                load = c.cognitive_load if c.cognitive_load is not None else "—"
+                unc = c.uncertainty if c.uncertainty is not None else "—"
+                console.print(f"Metrics: {load}/{unc}")
+            console.print()
+            console.print(c.full_context)
+            console.print()
+
+    except Exception as e:
+        logger.exception("Unexpected error in context")
+        console.print(f"[bold red]✗ Unexpected error: {e}[/bold red]")
+        raise typer.Exit(1)
+
+
 @app.callback()
 def main(
     version: bool = typer.Option(
