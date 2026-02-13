@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mimir-mvp"
+version = "0.1.0"
+description = "Mimir - MVP система управления когнитивным контекстом"
+authors = [{name = "Author"}]
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "SQLAlchemy>=2.0.0",
+    "psycopg[binary]>=3.1.0",
+    "alembic>=1.13.0",
+    "typer[all]>=0.9.0",
+    "python-dotenv>=1.0.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-asyncio>=0.21.0",
+    "ruff>=0.1.0",
+    "mypy>=1.5.0",
+    "black>=23.10.0",
+]
+
+[project.scripts]
+mimir = "mimir.cli:app"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
