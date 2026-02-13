@@ -256,16 +256,42 @@ def switch(
 ) -> None:
     """Switch current task and/or branch."""
     try:
+        services = get_services()
+
+        # Validate task exists before setting current task
         if task:
+            task_obj = services["task_service"].get_task_by_name(task)
+            if not task_obj:
+                console.print(f"[bold red]✗ Error: Task '{task}' not found[/bold red]")
+                services["session"].close()
+                raise typer.Exit(1)
+
             StateManager.set_current_task(task)
             console.print(f"[bold green]✓ Switched to task:[/bold green] {task}")
 
+        # Validate branch if possible (requires a task to check against)
         if branch:
+            task_name_for_branch = task or StateManager.get_current_task()
+            if task_name_for_branch:
+                task_obj_for_branch = services["task_service"].get_task_by_name(task_name_for_branch)
+                if not task_obj_for_branch:
+                    console.print(f"[bold red]✗ Error: Task '{task_name_for_branch}' not found[/bold red]")
+                    services["session"].close()
+                    raise typer.Exit(1)
+
+                br = services["branch_service"].get_branch(task_obj_for_branch.id, branch)
+                if not br:
+                    console.print(f"[bold red]✗ Error: Branch '{branch}' not found for task '{task_name_for_branch}'[/bold red]")
+                    services["session"].close()
+                    raise typer.Exit(1)
+
             StateManager.set_current_branch(branch)
             console.print(f"[bold green]✓ Switched to branch:[/bold green] {branch}")
 
         if not task and not branch:
             console.print("[bold yellow]ⓘ Nothing to switch (use --task or --branch)[/bold yellow]")
+
+        services["session"].close()
 
     except Exception as e:
         logger.exception("Unexpected error in switch")
