@@ -32,6 +32,12 @@ dev = [
 [project.scripts]
 mimir = "mimir.cli:app"
 
+[tool.setuptools]
+packages = ["mimir"]
+
+[tool.setuptools.package-data]
+mimir = ["py.typed"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = "test_*.py"
