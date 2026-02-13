@@ -48,6 +48,7 @@ cd mimir-mvp ``
 2. Создать виртуальное окружение
 
 `` python -m venv venv
+
 source venv/bin/activate ``
 
 3. Установить зависимости
