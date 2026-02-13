@@ -92,6 +92,18 @@ source venv/bin/activate ``
 ### Просмотр истории
 `` mimir history --task TASK-42 --branch main ``
 
+### Показать полный контекст задачи (команда `context`)
+```
+# Показать весь concatenated full_context для задачи
+mimir context --task TASK-42
+
+# Показать контекст только для конкретной ветки (использует порядок history)
+mimir context --task TASK-42 --branch main
+
+# Показать newest first
+mimir context --task TASK-42 --reverse
+```
+
 ## 🔎 Зачем это нужно?
 
 Mimir позволяет:
