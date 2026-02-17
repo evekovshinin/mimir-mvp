@@ -61,11 +61,14 @@ def init(
 def create_task(
     name: str = typer.Argument(..., help="Task name (e.g., TASK-42)"),
     author: str = typer.Option("default", "--author", help="Task creator"),
-    external_id: Optional[str] = typer.Option(None, "--external-id", help="External task id (e.g. JIRA)")
+    external_id: Optional[str] = typer.Option(None, "--external-id", help="External task id (e.g. JIRA)"),
+    message: Optional[str] = typer.Option(None, "--message", help="Initial commit message"),
+    context_file: Optional[Path] = typer.Option(None, "--context-file", help="File with context content"),
+    context: Optional[str] = typer.Option(None, "--context", help="Inline context"),
 ) -> None:
     """Create a new task with main branch."""
     try:
-        handle_create_task(name, author, external_id)
+        handle_create_task(name, author, external_id, message, context_file, context)
     except ValueError as e:
         print_error(str(e))
         raise typer.Exit(1)

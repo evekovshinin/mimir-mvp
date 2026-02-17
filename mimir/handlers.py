@@ -38,16 +38,46 @@ def handle_init() -> None:
     print_db_initialized()
 
 
-def handle_create_task(name: str, author: str = "default", external_id: str | None = None) -> None:
-    """Create new task with main branch."""
+def handle_create_task(
+    name: str,
+    author: str = "default",
+    external_id: str | None = None,
+    message: Optional[str] = None,
+    context_file: Optional[Path] = None,
+    context: Optional[str] = None,
+) -> None:
+    """Create new task with main branch, optionally create initial commit."""
     session = db_manager.get_session()
     try:
         service = TaskService(session)
         task = service.create_task(name=name, author=author, external_id=external_id)
         session.commit()
-        
+
         StateManager.set_current_task(name)
         print_task_created(task)
+
+        # If initial commit data provided, create first commit on main
+        if message or context_file or context:
+            # Resolve context content
+            if context_file:
+                context_content = context_file.read_text()
+            elif context:
+                context_content = context
+            else:
+                print_error("No context provided for initial commit")
+                raise ValueError("Context required for initial commit")
+
+            commit_service = CommitService(session)
+            new_commit = commit_service.create_commit(
+                task_id=task.id,
+                branch_name="main",
+                message=message or "Initial commit",
+                context=context_content,
+                author=author,
+            )
+            session.commit()
+            print_commit_created(new_commit, "main")
+
     except ValueError as e:
         print_error(f"{e}")
         raise
