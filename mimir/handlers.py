@@ -110,6 +110,38 @@ def handle_commit(
         session.close()
 
 
+def handle_branch(
+    action: str,
+    name: Optional[str],
+    task: Optional[str],
+    from_branch: Optional[str],
+) -> None:
+    """Dispatch branch actions (list, create, delete)."""
+    if action == "list":
+        handle_branch_list(task)
+    elif action == "create":
+        if not name:
+            print_error("Branch name required for create action")
+            raise ValueError("Branch name required")
+        task_name = task or StateManager.get_current_task()
+        if not task_name:
+            print_error("Task not specified")
+            raise ValueError("Task required")
+        handle_branch_create(name, task_name, from_branch)
+    elif action == "delete":
+        if not name:
+            print_error("Branch name required for delete action")
+            raise ValueError("Branch name required")
+        task_name = task or StateManager.get_current_task()
+        if not task_name:
+            print_error("Task not specified")
+            raise ValueError("Task required")
+        handle_branch_delete(task_name, name)
+    else:
+        print_error(f"Unknown action: {action}. Use 'list', 'create', or 'delete'")
+        raise ValueError(f"Unknown action: {action}")
+
+
 def handle_branch_list(task: Optional[str]) -> None:
     """List branches for task."""
     session = db_manager.get_session()
