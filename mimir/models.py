@@ -28,6 +28,7 @@ class Task(Base):
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    external_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
 
     # Relationships
@@ -39,7 +40,7 @@ class Task(Base):
     )
 
     def __repr__(self) -> str:
-        return f"<Task(id={self.id}, name={self.name})>"
+        return f"<Task(id={self.id}, name={self.name}, external_id={self.external_id})>"
 
 
 class ContextCommit(Base):

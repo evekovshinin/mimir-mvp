@@ -16,7 +16,7 @@ class TaskService:
         """Initialize task service."""
         self.session = session
 
-    def create_task(self, name: str, author: str = "default") -> Task:
+    def create_task(self, name: str, author: str = "default", external_id: str | None = None) -> Task:
         """Create a new task with main branch.
         
         Args:
@@ -36,7 +36,7 @@ class TaskService:
             raise ValueError(f"Task '{name}' already exists")
 
         # Create task
-        task = Task(name=name)
+        task = Task(name=name, external_id=external_id)
         self.session.add(task)
         self.session.flush()  # Get the task ID
 

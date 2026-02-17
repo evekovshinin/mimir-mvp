@@ -185,3 +185,29 @@ def print_version() -> None:
         console.print(f"[bold cyan]mimir {__version__}[/bold cyan]")
     except Exception:
         console.print("[bold cyan]mimir (unknown version)[/bold cyan]")
+
+
+def print_tasks_list(tasks_info: list[dict]) -> None:
+    """Print list of tasks with stats.
+
+    Each item in tasks_info should be a dict with keys:
+    - name, external_id, created_at, commits_count, last_commit_at
+    """
+    if not tasks_info:
+        print_dim("No tasks found")
+        return
+
+    table = Table(title="Tasks")
+    table.add_column("Name", style="cyan")
+    table.add_column("External ID", style="magenta")
+    table.add_column("Created At", style="dim")
+    table.add_column("Commits", style="green")
+    table.add_column("Last Commit", style="dim")
+
+    for t in tasks_info:
+        created = t["created_at"].isoformat()[:19]
+        last = t["last_commit_at"].isoformat()[:19] if t["last_commit_at"] else "—"
+        ext = t.get("external_id") or "—"
+        table.add_row(t["name"], ext, created, str(t["commits_count"]), last)
+
+    console.print(table)

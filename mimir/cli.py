@@ -12,6 +12,7 @@ from mimir.handlers import (
     handle_commit,
     handle_context,
     handle_create_task,
+    handle_list_tasks,
     handle_history,
     handle_init,
     handle_show,
@@ -60,10 +61,11 @@ def init(
 def create_task(
     name: str = typer.Argument(..., help="Task name (e.g., TASK-42)"),
     author: str = typer.Option("default", "--author", help="Task creator"),
+    external_id: Optional[str] = typer.Option(None, "--external-id", help="External task id (e.g. JIRA)")
 ) -> None:
     """Create a new task with main branch."""
     try:
-        handle_create_task(name, author)
+        handle_create_task(name, author, external_id)
     except ValueError as e:
         print_error(str(e))
         raise typer.Exit(1)
@@ -190,6 +192,17 @@ def context(
         handle_context(task, branch, reverse)
     except Exception as e:
         logger.exception("Unexpected error in context")
+        print_error(str(e))
+        raise typer.Exit(1)
+
+
+@app.command()
+def tasks() -> None:
+    """List all tasks with stats."""
+    try:
+        handle_list_tasks()
+    except Exception as e:
+        logger.exception("Unexpected error in tasks")
         print_error(str(e))
         raise typer.Exit(1)
 

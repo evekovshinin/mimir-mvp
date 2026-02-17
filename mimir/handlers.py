@@ -22,11 +22,13 @@ from mimir.output import (
     print_status,
     print_db_initialized,
     print_dim,
+    print_tasks_list,
 )
 from mimir.services.branch_service import BranchService
 from mimir.services.commit_service import CommitService
 from mimir.services.task_service import TaskService
 from mimir.state_manager import StateManager
+from mimir.services.commit_service import CommitService
 
 
 def handle_init() -> None:
@@ -36,12 +38,12 @@ def handle_init() -> None:
     print_db_initialized()
 
 
-def handle_create_task(name: str, author: str = "default") -> None:
+def handle_create_task(name: str, author: str = "default", external_id: str | None = None) -> None:
     """Create new task with main branch."""
     session = db_manager.get_session()
     try:
         service = TaskService(session)
-        task = service.create_task(name=name, author=author)
+        task = service.create_task(name=name, author=author, external_id=external_id)
         session.commit()
         
         StateManager.set_current_task(name)
@@ -338,3 +340,30 @@ def handle_status() -> None:
     current_task = StateManager.get_current_task()
     current_branch = StateManager.get_current_branch()
     print_status(current_task, current_branch)
+
+
+def handle_list_tasks() -> None:
+    """List all tasks with commit stats."""
+    session = db_manager.get_session()
+    try:
+        task_service = TaskService(session)
+        commit_service = CommitService(session)
+
+        tasks = task_service.list_tasks()
+        tasks_info: list[dict] = []
+        for t in tasks:
+            commits = commit_service.get_commits_for_task(t.id)
+            last_commit_at = commits[-1].created_at if commits else None
+            tasks_info.append(
+                {
+                    "name": t.name,
+                    "external_id": getattr(t, "external_id", None),
+                    "created_at": t.created_at,
+                    "commits_count": len(commits),
+                    "last_commit_at": last_commit_at,
+                }
+            )
+
+        print_tasks_list(tasks_info)
+    finally:
+        session.close()
