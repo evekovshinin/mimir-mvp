@@ -175,3 +175,13 @@ def print_status(current_task: str | None, current_branch: str | None) -> None:
 def print_db_initialized() -> None:
     """Print database initialization success."""
     print_success("Database initialized successfully")
+
+
+def print_version() -> None:
+    """Print application version."""
+    try:
+        from mimir import __version__
+
+        console.print(f"[bold cyan]mimir {__version__}[/bold cyan]")
+    except Exception:
+        console.print("[bold cyan]mimir (unknown version)[/bold cyan]")
