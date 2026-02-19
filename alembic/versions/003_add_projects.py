@@ -50,8 +50,14 @@ def upgrade() -> None:
     # Add foreign key constraint
     op.create_foreign_key("fk_tasks_project_id", "tasks", "projects", ["project_id"], ["id"])
     
-    # Drop unique constraint on task name (since we need unique per project)
-    op.drop_constraint("uq_tasks_name", "tasks", type_="unique")
+    # Drop unique constraint on task name using dynamic SQL to handle auto-generated names
+    # PostgreSQL may name it differently based on how it was created
+    op.execute(
+        """
+        ALTER TABLE tasks DROP CONSTRAINT IF EXISTS uq_tasks_name;
+        ALTER TABLE tasks DROP CONSTRAINT IF EXISTS tasks_name_key;
+        """
+    )
     
     # Add unique constraint for project_id + name
     op.create_unique_constraint("uq_project_task_name", "tasks", ["project_id", "name"])
