@@ -27,30 +27,51 @@ from mimir.output import (
 from mimir.services.branch_service import BranchService
 from mimir.services.commit_service import CommitService
 from mimir.services.task_service import TaskService
+from mimir.services.project_service import ProjectService
 from mimir.state_manager import StateManager
-from mimir.services.commit_service import CommitService
 
 
-def handle_init() -> None:
+def handle_init(database_url: str | None = None) -> None:
     """Initialize database."""
-    print_success("Initializing database...")
-    db_manager.init_db()
+    from mimir.config import settings
+    
+    url = database_url or settings.database_url
+    print_success(f"Initializing database: {url}")
+    db_manager.init_db(url)
     print_db_initialized()
 
 
 def handle_create_task(
-    name: str,
+    project: Optional[str] = None,
+    name: str = None,
     author: str = "default",
     external_id: str | None = None,
     message: Optional[str] = None,
     context_file: Optional[Path] = None,
     context: Optional[str] = None,
 ) -> None:
-    """Create new task with main branch, optionally create initial commit."""
+    """Create new task in a project with main branch, optionally create initial commit."""
     session = db_manager.get_session()
     try:
-        service = TaskService(session)
-        task = service.create_task(name=name, author=author, external_id=external_id)
+        # Resolve project
+        project_name = project
+        if not project_name:
+            print_error("Project not specified. Use --project flag.")
+            raise ValueError("Project is required")
+
+        project_service = ProjectService(session)
+        project_obj = project_service.get_project_by_name(project_name)
+        if not project_obj:
+            print_error(f"Project '{project_name}' not found")
+            raise ValueError(f"Project '{project_name}' not found")
+
+        task_service = TaskService(session)
+        task = task_service.create_task(
+            project_id=project_obj.id,
+            name=name,
+            author=author,
+            external_id=external_id,
+        )
         session.commit()
 
         StateManager.set_current_task(name)
@@ -78,8 +99,7 @@ def handle_create_task(
             session.commit()
             print_commit_created(new_commit, "main")
 
-    except ValueError as e:
-        print_error(f"{e}")
+    except ValueError:
         raise
     finally:
         session.close()
@@ -372,14 +392,26 @@ def handle_status() -> None:
     print_status(current_task, current_branch)
 
 
-def handle_list_tasks() -> None:
-    """List all tasks with commit stats."""
+def handle_list_tasks(project: Optional[str] = None) -> None:
+    """List tasks, optionally filtered by project."""
     session = db_manager.get_session()
     try:
+        project_service = ProjectService(session)
         task_service = TaskService(session)
         commit_service = CommitService(session)
 
-        tasks = task_service.list_tasks()
+        # If project specified, get its ID
+        project_id = None
+        project_name_display = None
+        if project:
+            project_obj = project_service.get_project_by_name(project)
+            if not project_obj:
+                print_error(f"Project '{project}' not found")
+                raise ValueError(f"Project '{project}' not found")
+            project_id = project_obj.id
+            project_name_display = project_obj.name
+
+        tasks = task_service.list_tasks(project_id=project_id)
         tasks_info: list[dict] = []
         for t in tasks:
             commits = commit_service.get_commits_for_task(t.id)
@@ -387,6 +419,7 @@ def handle_list_tasks() -> None:
             tasks_info.append(
                 {
                     "name": t.name,
+                    "project": t.project.name,
                     "external_id": getattr(t, "external_id", None),
                     "created_at": t.created_at,
                     "commits_count": len(commits),
@@ -394,6 +427,63 @@ def handle_list_tasks() -> None:
                 }
             )
 
-        print_tasks_list(tasks_info)
+        print_tasks_list(tasks_info, project_name=project_name_display)
+    finally:
+        session.close()
+
+
+def handle_create_project(name: str, parent: Optional[str] = None) -> None:
+    """Create a new project."""
+    session = db_manager.get_session()
+    try:
+        project_service = ProjectService(session)
+
+        # Validate parent exists if specified
+        parent_id = None
+        if parent:
+            parent_obj = project_service.get_project_by_name(parent)
+            if not parent_obj:
+                print_error(f"Parent project '{parent}' not found")
+                raise ValueError(f"Parent project '{parent}' not found")
+            parent_id = parent_obj.id
+
+        project = project_service.create_project(name=name, parent_id=parent_id)
+        session.commit()
+
+        print_success(f"Created project: {name}")
+        if parent:
+            print_dim(f"  Parent: {parent}")
+
+    except ValueError:
+        raise
+    finally:
+        session.close()
+
+
+def handle_list_projects() -> None:
+    """List all projects in hierarchical view."""
+    session = db_manager.get_session()
+    try:
+        project_service = ProjectService(session)
+        projects = project_service.list_projects()
+
+        if not projects:
+            print_dim("No projects found")
+            return
+
+        # Build hierarchy for display
+        root_projects = project_service.list_root_projects()
+        
+        def print_project_tree(project, indent=0):
+            """Recursively print project tree."""
+            prefix = "  " * indent + ("├─ " if indent > 0 else "")
+            print_dim(f"{prefix}{project.name}")
+            children = project_service.list_child_projects(project.id)
+            for child in children:
+                print_project_tree(child, indent + 1)
+
+        for project in root_projects:
+            print_project_tree(project)
+
     finally:
         session.close()

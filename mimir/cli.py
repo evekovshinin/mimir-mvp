@@ -11,7 +11,9 @@ from mimir.handlers import (
     handle_branch,
     handle_commit,
     handle_context,
+    handle_create_project,
     handle_create_task,
+    handle_list_projects,
     handle_list_tasks,
     handle_history,
     handle_init,
@@ -49,8 +51,7 @@ def init(
 ) -> None:
     """Initialize Mimir database."""
     try:
-        url = database_url or settings.database_url
-        handle_init(url)
+        handle_init(database_url)
     except Exception as e:
         logger.exception("Unexpected error in init")
         print_error(str(e))
@@ -60,6 +61,7 @@ def init(
 @app.command()
 def create_task(
     name: str = typer.Argument(..., help="Task name (e.g., TASK-42)"),
+    project: str = typer.Option(..., "--project", help="Project name (required)"),
     author: str = typer.Option("default", "--author", help="Task creator"),
     external_id: Optional[str] = typer.Option(None, "--external-id", help="External task id (e.g. JIRA)"),
     message: Optional[str] = typer.Option(None, "--message", help="Initial commit message"),
@@ -68,7 +70,7 @@ def create_task(
 ) -> None:
     """Create a new task with main branch."""
     try:
-        handle_create_task(name, author, external_id, message, context_file, context)
+        handle_create_task(project, name, author, external_id, message, context_file, context)
     except ValueError as e:
         print_error(str(e))
         raise typer.Exit(1)
@@ -200,12 +202,43 @@ def context(
 
 
 @app.command()
-def tasks() -> None:
-    """List all tasks with stats."""
+def tasks(project: Optional[str] = typer.Option(None, "--project", help="Filter tasks by project")) -> None:
+    """List all tasks with stats, optionally filtered by project."""
     try:
-        handle_list_tasks()
+        handle_list_tasks(project=project)
+    except ValueError as e:
+        print_error(str(e))
+        raise typer.Exit(1)
     except Exception as e:
         logger.exception("Unexpected error in tasks")
+        print_error(str(e))
+        raise typer.Exit(1)
+
+
+@app.command()
+def create_project(
+    name: str = typer.Argument(..., help="Project name"),
+    parent: Optional[str] = typer.Option(None, "--parent", help="Parent project name (for hierarchy)"),
+) -> None:
+    """Create a new project."""
+    try:
+        handle_create_project(name, parent=parent)
+    except ValueError as e:
+        print_error(str(e))
+        raise typer.Exit(1)
+    except Exception as e:
+        logger.exception("Unexpected error in create_project")
+        print_error(str(e))
+        raise typer.Exit(1)
+
+
+@app.command()
+def projects() -> None:
+    """List all projects in hierarchical view."""
+    try:
+        handle_list_projects()
+    except Exception as e:
+        logger.exception("Unexpected error in projects")
         print_error(str(e))
         raise typer.Exit(1)
 

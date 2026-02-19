@@ -21,17 +21,49 @@ class Base(DeclarativeBase):
     pass
 
 
+class Project(Base):
+    """Project model (hierarchical structure)."""
+
+    __tablename__ = "projects"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    parent_id: Mapped[Optional[UUID]] = mapped_column(
+        ForeignKey("projects.id"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+
+    # Relationships - self-referential for hierarchy
+    projects: Mapped[list["Project"]] = relationship(
+        "Project", remote_side=[id], cascade="all, delete-orphan", back_populates="parent"
+    )
+    parent: Mapped[Optional["Project"]] = relationship(
+        "Project", remote_side=[parent_id], back_populates="projects"
+    )
+    tasks: Mapped[list["Task"]] = relationship(
+        "Task", back_populates="project", cascade="all, delete-orphan"
+    )
+
+    def __repr__(self) -> str:
+        return f"<Project(id={self.id}, name={self.name}, parent_id={self.parent_id})>"
+
+
 class Task(Base):
     """Task model."""
 
     __tablename__ = "tasks"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    project_id: Mapped[UUID] = mapped_column(ForeignKey("projects.id"), nullable=False)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
     external_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
 
+    # Unique constraint: task name is unique within a project
+    __table_args__ = (UniqueConstraint("project_id", "name", name="uq_project_task_name"),)
+
     # Relationships
+    project: Mapped[Project] = relationship("Project", back_populates="tasks")
     commits: Mapped[list["ContextCommit"]] = relationship(
         "ContextCommit", back_populates="task", cascade="all, delete-orphan"
     )
@@ -40,7 +72,7 @@ class Task(Base):
     )
 
     def __repr__(self) -> str:
-        return f"<Task(id={self.id}, name={self.name}, external_id={self.external_id})>"
+        return f"<Task(id={self.id}, project_id={self.project_id}, name={self.name})>"
 
 
 class ContextCommit(Base):
