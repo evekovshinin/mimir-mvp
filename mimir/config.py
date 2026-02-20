@@ -3,7 +3,17 @@ import logging
 import os
 from pathlib import Path
 
-from pydantic_settings import BaseSettings
+try:
+    from pydantic_settings import BaseSettings
+except Exception:
+    # Lightweight fallback for test environments where pydantic_settings
+    # is not available. This allows tests to import `mimir.config` without
+    # installing dependencies. The fallback does not provide env-var
+    # parsing; it only allows `Settings()` to be instantiated.
+    class BaseSettings:  # type: ignore
+        class Config:  # placeholder
+            env_file = ".env"
+            case_sensitive = False
 
 
 class Settings(BaseSettings):

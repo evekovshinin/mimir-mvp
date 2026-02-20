@@ -21,9 +21,9 @@ def dummy_session():
 @pytest.fixture(autouse=True)
 def patch_db_session(monkeypatch, dummy_session):
     """Patch db_manager.get_session to return a lightweight dummy session."""
-    import mimir.db.db_manager as db_manager
+    import mimir.db as db_module
 
-    monkeypatch.setattr(db_manager, "get_session", lambda: dummy_session)
+    monkeypatch.setattr(db_module, "get_session", lambda: dummy_session)
     yield dummy_session
 
 
