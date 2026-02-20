@@ -5,7 +5,8 @@ from uuid import UUID
 
 import typer
 
-from mimir.config import logger, settings
+from mimir.config import settings
+from mimir.logger import logger
 from mimir.db import db_manager
 from mimir.handlers import (
     handle_branch,
