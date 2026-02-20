@@ -353,21 +353,26 @@ def handle_show(commit_id: str) -> None:
 
 
 def handle_context(
-    task: str,
+    task: Optional[str],
     branch: Optional[str],
     reverse: bool,
 ) -> None:
     """Show full context for task."""
     session = db_manager.get_session()
     try:
+        task_name = task or StateManager.get_current_task()
+        if not task_name:
+            print_error("Task not specified")
+            raise ValueError("Task required")
+
         task_service = TaskService(session)
-        task_obj = task_service.get_task_by_name(task)
+        task_obj = task_service.get_task_by_name(task_name)
         if not task_obj:
-            print_error(f"Task '{task}' not found")
+            print_error(f"Task '{task_name}' not found")
             raise ValueError("Task not found")
 
         commit_service = CommitService(session)
-        
+
         commits: list[ContextCommit]
         if branch:
             commits = commit_service.get_history(task_obj.id, branch, limit=1000)
