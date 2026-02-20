@@ -7,7 +7,6 @@ Create Date: 2026-02-19 00:00:00.000000
 """
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "003_add_projects"
@@ -24,9 +23,9 @@ def upgrade() -> None:
         sa.Column("name", sa.String(length=255), nullable=False),
         sa.Column("parent_id", sa.UUID(), nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=False),
-        sa.ForeignKeyConstraint(["parent_id"], ["projects.id"], ),
+        sa.ForeignKeyConstraint(["parent_id"], ["projects.id"]),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("name"),
+        sa.UniqueConstraint("name", name="uq_projects_name"),
     )
     op.create_index(op.f("ix_projects_name"), "projects", ["name"])
 
@@ -50,14 +49,9 @@ def upgrade() -> None:
     # Add foreign key constraint
     op.create_foreign_key("fk_tasks_project_id", "tasks", "projects", ["project_id"], ["id"])
     
-    # Drop unique constraint on task name using dynamic SQL to handle auto-generated names
-    # PostgreSQL may name it differently based on how it was created
-    op.execute(
-        """
-        ALTER TABLE tasks DROP CONSTRAINT IF EXISTS uq_tasks_name;
-        ALTER TABLE tasks DROP CONSTRAINT IF EXISTS tasks_name_key;
-        """
-    )
+    # Drop all UNIQUE constraints on the name column (handles auto-generated names)
+    # This works because tasks_name_key is the actual constraint name created by SQLAlchemy
+    op.execute("ALTER TABLE tasks DROP CONSTRAINT IF EXISTS tasks_name_key")
     
     # Add unique constraint for project_id + name
     op.create_unique_constraint("uq_project_task_name", "tasks", ["project_id", "name"])
@@ -67,8 +61,8 @@ def downgrade() -> None:
     # Drop unique constraint for project_id + name
     op.drop_constraint("uq_project_task_name", "tasks", type_="unique")
     
-    # Re-add unique constraint on task name
-    op.create_unique_constraint("uq_tasks_name", "tasks", ["name"])
+    # Re-add unique constraint on task name - use tasks_name_key to match auto-generated name
+    op.create_unique_constraint("tasks_name_key", "tasks", ["name"])
     
     # Drop foreign key
     op.drop_constraint("fk_tasks_project_id", "tasks", type_="foreignkey")
