@@ -35,10 +35,14 @@ class Project(Base):
 
     # Relationships - self-referential for hierarchy
     projects: Mapped[list["Project"]] = relationship(
-        "Project", remote_side=[id], cascade="all, delete-orphan", back_populates="parent"
+        "Project", 
+        remote_side=[id], 
+        cascade="all, delete-orphan", 
+        back_populates="parent",
+        single_parent=True,
     )
     parent: Mapped[Optional["Project"]] = relationship(
-        "Project", remote_side=[parent_id], back_populates="projects"
+        "Project", remote_side=[parent_id], back_populates="projects", foreign_keys=[parent_id]
     )
     tasks: Mapped[list["Task"]] = relationship(
         "Task", back_populates="project", cascade="all, delete-orphan"
