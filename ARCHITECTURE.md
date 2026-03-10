@@ -12,33 +12,43 @@ Mimir построена на принципах Git-подобной систе
      │                                            │
 ┌────▼──────────────────┐  ┌────────────────────▼────────┐
 │   Handlers Layer      │  │  Output Layer               │
-│   (handlers.py)       │  │  (output.py)                │
+│   (handlers/*.py)     │  │  (output.py)                │
 │                       │  │                              │
-│ • handle_commit()     │  │ • print_success()           │
-│ • handle_history()    │  │ • print_error()             │
-│ • handle_branch()     │  │ • print_table()             │
-│ • handle_context()    │  │ • format_commit_info()      │
-│ • и другие...         │  │ • и другие...               │
+│ • handle_create_project│  │ • print_success()           │
+│ • handle_list_projects │  │ • print_error()             │
+│ • handle_create_task   │  │ • print_table()             │
+│ • handle_commit()      │  │ • format_commit_info()      │
+│ • handle_history()     │  │ • и другие...               │
+│ • и другие...          │  │                              │
 └────┬──────────────────┘  └────────────────────────────┘
      │
 ┌────▼─────────────────────────────────────────────────────────┐
 │                    Service Layer                             │
 │  ┌──────────────────┐  ┌──────────────────┐  ┌────────────┐ │
-│  │   TaskService    │  │ CommitService    │  │BranchService││
+│  │  ProjectService  │  │   TaskService    │  │BranchService││
+│  │                  │  │                  │  │            ││
+│  │ • CRUD operations│  │ • CRUD operations│  │ • CRUD ops ││
+│  │ • Hierarchy mgmt │  │ • Project binding│  │ • Branch   ││
 │  └──────────────────┘  └──────────────────┘  └────────────┘ │
+│  ┌──────────────────┐                                        │
+│  │ CommitService    │                                        │
+│  │ • Commit ops     │                                        │
+│  │ • History        │                                        │
+│  └──────────────────┘                                        │
 └────┬─────────────────────────────────────────────────────────┘
      │
 ┌────▼─────────────────────────────────────────────────────────┐
 │                   ORM Layer (SQLAlchemy)                     │
 │  ┌───────────────────────────────────────────────────────┐  │
-│  │  Task | ContextCommit | CommitParent | Branch         │  │
+│  │ Project | Task | ContextCommit | CommitParent | Branch │  │
 │  └───────────────────────────────────────────────────────┘  │
 └────┬─────────────────────────────────────────────────────────┘
      │
 ┌────▼─────────────────────────────────────────────────────────┐
 │              PostgreSQL Database                             │
 │  ┌───────────────────────────────────────────────────────┐  │
-│  │  tasks | context_commits | commit_parents | branches  │  │
+│  │ projects | tasks | context_commits | commit_parents |  │  │
+│  │ branches                                                │  │
 │  └───────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -77,8 +87,10 @@ def commit(
 
 **Основные функции обработчиков:**
 ```python
-def handle_init(database_url: str) -> None
-def handle_create_task(name: str, author: str) -> None
+def handle_create_project(name: str, parent: Optional[str] = None) -> None
+def handle_list_projects() -> None
+def handle_create_task(project: str, name: str, author: str, ...) -> None
+def handle_list_tasks(project: Optional[str] = None) -> None
 def handle_commit(task, branch, message, ...) -> None
 def handle_history(task, branch, limit) -> None
 def handle_show(commit_id: str) -> None

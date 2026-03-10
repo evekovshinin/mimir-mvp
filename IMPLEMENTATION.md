@@ -6,7 +6,8 @@
 
 | Компонент | Статус | Описание |
 |-----------|--------|---------|
-| **Core Models** | ✅ | Task, ContextCommit, CommitParent, Branch с правильными отношениями и constraints |
+| **Core Models** | ✅ | Project (hierarchical), Task, ContextCommit, CommitParent, Branch с правильными отношениями и constraints |
+| **Project Hierarchy** | ✅ | Projects can have parent projects, tasks belong to projects |
 | **DAG структура** | ✅ | CommitParent таблица поддерживает merge (несколько родителей) |
 | **Immutability** | ✅ | ContextCommit immutable, поддержка snapshots контекста |
 | **PostgreSQL** | ✅ | SQLAlchemy ORM, миграции Alembic, UUID идентификаторы |
@@ -15,14 +16,17 @@
 ### 🖥️ CLI Команды (Typer)
 
 ```bash
-✅ mimir create-task <name>              # Создание задачи с main branch
-✅ mimir commit [options]                 # Создание commit с контекстом
-✅ mimir branch [list|create|delete]     # Управление ветками
-✅ mimir switch --task --branch          # Переключение контекста
-✅ mimir history --task --branch         # История commits (recursive CTE)
-✅ mimir show <commit-id>                # Просмотр полного контекста
-✅ mimir status                          # Текущее состояние
-✅ mimir init                            # Инициализация БД
+✅ mimir create-project <name> [--parent <parent>]    # Создание проекта с иерархией
+✅ mimir projects                                     # Список всех проектов
+✅ mimir create-task <name> --project <project>       # Создание задачи в проекте
+✅ mimir tasks [--project <project>]                  # Список задач (опционально по проекту)
+✅ mimir commit [options]                              # Создание commit с контекстом
+✅ mimir branch [list|create|delete]                   # Управление ветками
+✅ mimir switch --task --branch                        # Переключение контекста
+✅ mimir history --task --branch                       # История commits (recursive CTE)
+✅ mimir show <commit-id>                              # Просмотр полного контекста
+✅ mimir status                                        # Текущее состояние
+✅ mimir init                                          # Инициализация БД
 ```
 
 **Особенности:**
@@ -33,12 +37,23 @@
 
 ### 📦 Сервисы (Service Layer)
 
+#### ProjectService
+```python
+✅ create_project(name, parent_id) → Project
+✅ get_project(project_id) → Project | None
+✅ get_project_by_name(name) → Project | None
+✅ list_projects() → list[Project]
+✅ list_root_projects() → list[Project]
+✅ list_child_projects(parent_id) → list[Project]
+✅ delete_project(project_id) → bool
+```
+
 #### TaskService
 ```python
-✅ create_task(name, author) → Task
+✅ create_task(project_id, name, author, external_id) → Task
 ✅ get_task(task_id) → Task | None
-✅ get_task_by_name(name) → Task | None
-✅ list_tasks() → list[Task]
+✅ get_task_by_name(project_name, task_name) → Task | None
+✅ list_tasks(project_id=None) → list[Task]
 ✅ delete_task(task_id) → bool
 ```
 
@@ -64,22 +79,28 @@
 
 **Таблицы:**
 ```
-Tasks                    (id, name, created_at)
-ContextCommits          (id, task_id, message, full_context, author, cognitive_load, uncertainty, created_at)
-CommitParents           (child_id, parent_id) — поддерживает merge
-Branches                (id, task_id, name, head_commit_id, created_at)
+Projects                    (id, name, parent_id, created_at) — hierarchical
+Tasks                       (id, project_id, name, external_id, created_at)
+ContextCommits              (id, task_id, message, full_context, author, cognitive_load, uncertainty, created_at)
+CommitParents               (child_id, parent_id) — supports merge
+Branches                    (id, task_id, name, head_commit_id, created_at)
 ```
 
 **Indixes и Constraints:**
-- Unique constraint на task.name
-- Unique constraint на (task_id, branch.name)
-- Unique constraint на (child_id, parent_id)
-- Foreign key constraints
-- Performance indexes
+- Unique constraint на projects.name
+- Unique constraint на (projects.parent_id, projects.name) — nested unique
+- Unique constraint на (tasks.project_id, tasks.name)
+- Unique constraint на tasks.external_id (if not null)
+- Unique constraint на (branches.task_id, branches.name)
+- Unique constraint на (commit_parents.child_id, commit_parents.parent_id)
+- Foreign key constraints with cascade deletes
+- Performance indexes on frequently queried columns
 
 **Миграции:**
 ```bash
 ✅ 001_initial.py        # Создание всех таблиц с constraints
+✅ 002_add_external_id.py # Добавление external_id к задачам
+✅ 003_add_projects.py   # Добавление поддержки проектов
 ```
 
 ### 🧪 Тестирование

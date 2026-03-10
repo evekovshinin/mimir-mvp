@@ -15,14 +15,27 @@ mimir-mvp/
 │   ├── state_manager.py     # Local ~/.mimir/state.json manager
 │   └── services/
 │       ├── __init__.py
-│       ├── task_service.py  # Task CRUD
-│       ├── commit_service.py # Commit operations & history
-│       └── branch_service.py # Branch management
+│       ├── project_service.py  # Project CRUD
+│       ├── task_service.py     # Task CRUD
+│       ├── commit_service.py   # Commit operations & history
+│       └── branch_service.py   # Branch management
+│   └── handlers/
+│       ├── __init__.py
+│       ├── _common.py        # Common handler utilities
+│       ├── branch.py         # Branch command handlers
+│       ├── commit.py         # Commit command handlers
+│       ├── context.py        # Context command handlers
+│       ├── init.py           # Init command handlers
+│       ├── project.py        # Project command handlers
+│       ├── status.py         # Status command handlers
+│       ├── task.py           # Task command handlers
 │
 ├── alembic/                 # Database migrations
 │   ├── env.py
 │   └── versions/
-│       └── 001_initial.py   # Initial schema
+│       ├── 001_initial.py   # Initial schema
+│       ├── 002_add_external_id.py  # Add external_id to tasks
+│       └── 003_add_projects.py     # Add projects support
 │
 ├── tests/
 │   ├── __init__.py

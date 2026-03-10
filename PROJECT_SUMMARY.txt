@@ -8,17 +8,17 @@ Mimir is a cognitive context management system that models context evolution
 as a DAG (Directed Acyclic Graph), similar to Git but for cognitive processes.
 
 Project Type: Python CLI Application
-Version: 0.1.0
-Status: COMPLETE MVP - Ready for use
+Version: 0.2.0
+Status: MVP WITH PROJECT SUPPORT - Ready for use
 
 📊 STATISTICS
 ================================================================================
-Python Files:           12 (+ tests)
-Models:                 4 (Task, ContextCommit, CommitParent, Branch)
-Services:               3 (TaskService, CommitService, BranchService)
-CLI Commands:           8 (create-task, commit, branch, switch, history, show, status, init)
-Database Tables:        4
-Migrations:             1 (001_initial.py)
+Python Files:           13 (+ tests)
+Models:                 5 (Project, Task, ContextCommit, CommitParent, Branch)
+Services:               4 (ProjectService, TaskService, CommitService, BranchService)
+CLI Commands:           10 (create-project, projects, create-task, commit, branch, switch, history, show, status, init)
+Database Tables:        5
+Migrations:             3 (001_initial.py, 002_add_external_id.py, 003_add_projects.py)
 Test Cases:            16
 Documentation Files:    6
 
@@ -33,13 +33,28 @@ mimir-mvp/
 │   ├── models.py                 # SQLAlchemy ORM models
 │   ├── state_manager.py          # Local state management
 │   └── services/
+│       ├── __init__.py
+│       ├── project_service.py    # Project CRUD operations
 │       ├── task_service.py       # Task operations
 │       ├── commit_service.py     # Commit operations + history
 │       └── branch_service.py     # Branch operations
+│   └── handlers/
+│       ├── __init__.py
+│       ├── _common.py            # Common handler utilities
+│       ├── branch.py             # Branch command handlers
+│       ├── commit.py             # Commit command handlers
+│       ├── context.py            # Context command handlers
+│       ├── init.py               # Init command handlers
+│       ├── project.py            # Project command handlers
+│       ├── status.py             # Status command handlers
+│       ├── task.py               # Task command handlers
 │
 ├── alembic/                      # Database migrations
 │   ├── env.py
-│   └── versions/001_initial.py
+│   └── versions/
+│       ├── 001_initial.py
+│       ├── 002_add_external_id.py
+│       └── 003_add_projects.py
 │
 ├── tests/
 │   └── test_services.py          # 16 pytest test cases
@@ -63,17 +78,19 @@ mimir-mvp/
 3-Layer Architecture:
 
     CLI Layer (Typer)
-    ├─ Commands: create-task, commit, branch, switch, history, show, status
+    ├─ Commands: create-project, projects, create-task, commit, branch, switch, history, show, status
     ├─ Rich formatting for beautiful output
     └─ Error handling with user-friendly messages
 
     Service Layer
+    ├─ ProjectService: project management (hierarchical)
     ├─ TaskService: task management
     ├─ CommitService: commit operations, history, merge
     └─ BranchService: branch management
 
     ORM Layer (SQLAlchemy)
-    ├─ Task model
+    ├─ Project model (hierarchical)
+    ├─ Task model (belongs to project)
     ├─ ContextCommit model (immutable)
     ├─ CommitParent model (DAG edges)
     └─ Branch model (pointers)
@@ -87,17 +104,21 @@ mimir-mvp/
 🗄️ DATABASE SCHEMA
 ================================================================================
 Tables:
-- tasks (id, name, created_at)
+- projects (id, name, parent_id, created_at) — hierarchical structure
+- tasks (id, project_id, name, external_id, created_at)
 - context_commits (id, task_id, message, full_context, author, cognitive_load, uncertainty, created_at)
 - commit_parents (child_id, parent_id) — supports merge
 - branches (id, task_id, name, head_commit_id, created_at)
 
 Constraints:
-- UNIQUE(task.name)
-- UNIQUE(task_id, branch.name)
-- UNIQUE(child_id, parent_id)
-- Foreign key relationships
-- Performance indexes
+- UNIQUE(projects.name)
+- UNIQUE(projects.parent_id, projects.name) — nested unique
+- UNIQUE(tasks.project_id, tasks.name)
+- UNIQUE(tasks.external_id) — if not null
+- UNIQUE(branches.task_id, branches.name)
+- UNIQUE(commit_parents.child_id, commit_parents.parent_id)
+- Foreign key relationships with cascade deletes
+- Performance indexes on frequently queried columns
 
 Features:
 - DAG structure with CommitParent
