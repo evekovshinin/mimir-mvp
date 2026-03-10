@@ -1,6 +1,6 @@
 """Mimir - Cognitive Context Management System."""
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 from mimir.config import logger, settings
 from mimir.db import db_manager

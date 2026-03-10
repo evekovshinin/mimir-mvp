@@ -2,9 +2,44 @@
 
 ## 📚 Сценарии использования
 
-### Сценарий 1: Исследование архитектуры с несколькими гипотезами
+### Сценарий 1: Организация проекта с несколькими задачами
 
-Вы работаете над рефакторингом системы и хотите изучить несколько подходов.
+Вы работаете над большим проектом рефакторинга и хотите организовать работу по задачам.
+
+#### Этап 1: Создание проекта и задач
+
+```bash
+# Создаем основной проект
+$ mimir create-project "ARCH-REFACTOR"
+
+# Создаем подпроект для конкретной части
+$ mimir create-project "API-OPTIMIZATION" --parent "ARCH-REFACTOR"
+
+# Создаем задачи в проектах
+$ mimir create-task "TASK-001" --project "ARCH-REFACTOR" --author "alice"
+$ mimir create-task "TASK-002" --project "API-OPTIMIZATION" --author "bob"
+$ mimir create-task "TASK-003" --project "API-OPTIMIZATION" --author "alice"
+
+# Просматриваем структуру проектов
+$ mimir projects
+ARCH-REFACTOR
+└── API-OPTIMIZATION
+
+# Просматриваем задачи
+$ mimir tasks
+Project: ARCH-REFACTOR
+  TASK-001 (alice)
+
+Project: API-OPTIMIZATION  
+  TASK-002 (bob)
+  TASK-003 (alice)
+
+# Просматриваем задачи конкретного проекта
+$ mimir tasks --project "API-OPTIMIZATION"
+Project: API-OPTIMIZATION
+  TASK-002 (bob)
+  TASK-003 (alice)
+```
 
 #### Этап 1: Создание задачи и начального контекста
 

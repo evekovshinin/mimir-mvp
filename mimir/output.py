@@ -187,18 +187,24 @@ def print_version() -> None:
         console.print("[bold cyan]mimir (unknown version)[/bold cyan]")
 
 
-def print_tasks_list(tasks_info: list[dict]) -> None:
+def print_tasks_list(tasks_info: list[dict], project_name: str | None = None) -> None:
     """Print list of tasks with stats.
 
     Each item in tasks_info should be a dict with keys:
-    - name, external_id, created_at, commits_count, last_commit_at
+    - name, project, external_id, created_at, commits_count, last_commit_at
     """
     if not tasks_info:
         print_dim("No tasks found")
         return
 
-    table = Table(title="Tasks")
+    title = f"Tasks (Project: {project_name})" if project_name else "Tasks"
+    table = Table(title=title)
     table.add_column("Name", style="cyan")
+    
+    # Only show project column if not filtered by project
+    if not project_name:
+        table.add_column("Project", style="magenta")
+    
     table.add_column("External ID", style="magenta")
     table.add_column("Created At", style="dim")
     table.add_column("Commits", style="green")
@@ -208,6 +214,17 @@ def print_tasks_list(tasks_info: list[dict]) -> None:
         created = t["created_at"].isoformat()[:19]
         last = t["last_commit_at"].isoformat()[:19] if t["last_commit_at"] else "—"
         ext = t.get("external_id") or "—"
-        table.add_row(t["name"], ext, created, str(t["commits_count"]), last)
+        
+        if project_name:
+            table.add_row(t["name"], ext, created, str(t["commits_count"]), last)
+        else:
+            table.add_row(t["name"], t.get("project", "—"), ext, created, str(t["commits_count"]), last)
 
     console.print(table)
+
+
+def print_project_created(name: str, parent: str | None = None) -> None:
+    """Print project creation confirmation."""
+    print_success(f"Created project: {name}")
+    if parent:
+        print_dim(f"  Parent: {parent}")
