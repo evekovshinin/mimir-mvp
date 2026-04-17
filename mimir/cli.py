@@ -244,14 +244,16 @@ def projects() -> None:
         raise typer.Exit(1)
 
 
-@app.callback()
+@app.callback(invoke_without_command=True)
 def main(
+    ctx: typer.Context,
     version: bool = typer.Option(
-        None,
+        False,
         "--version",
         "-v",
         help="Show version",
         is_flag=True,
+        is_eager=True,
     ),
 ) -> None:
     """Mimir - Cognitive Context Management System."""
